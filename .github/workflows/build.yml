@@ -1,0 +1,106 @@
+name: Build Automation Client (.exe)
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - '**.js'
+      - '**.json'
+      - '**.html'
+      - '**.css'
+      - '.github/workflows/build.yml'
+  workflow_dispatch:           # permite rodar manualmente pelo GitHub UI
+    inputs:
+      deploy_to_vps:
+        description: 'Copiar .exe para o VPS após o build?'
+        required: false
+        default: 'false'
+        type: boolean
+
+jobs:
+  build:
+    runs-on: windows-latest    # OBRIGATÓRIO: electron-builder gera .exe apenas no Windows
+
+    steps:
+      # ── 1. Checkout ──────────────────────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── 2. Node.js ───────────────────────────────────────────────────────────
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # ── 3. Instalar dependências ──────────────────────────────────────────────
+      - name: npm install
+        run: npm ci
+
+      # ── 4. Build ─────────────────────────────────────────────────────────────
+      - name: Build instalador Windows
+        run: npm run build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── 5. Listar artefatos gerados ───────────────────────────────────────────
+      - name: Listar dist/
+        run: Get-ChildItem dist/ | Format-Table Name, Length
+
+      # ── 6. Upload artefatos (ficam disponíveis 90 dias) ───────────────────────
+      - name: Upload artefatos
+        uses: actions/upload-artifact@v4
+        with:
+          name: automation-client-windows
+          path: |
+            dist/*.exe
+            dist/*.blockmap
+          if-no-files-found: error
+          retention-days: 90
+
+      # ── 7. Criar GitHub Release (tag automática) ──────────────────────────────
+      - name: Obter versão do package.json
+        id: version
+        run: |
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          echo "VERSION=$version" >> $env:GITHUB_ENV
+          echo "TAG=v$version-build${{ github.run_number }}" >> $env:GITHUB_ENV
+
+      - name: Criar Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG }}
+          name: "Automation Client ${{ env.VERSION }} (build ${{ github.run_number }})"
+          body: |
+            ## Automation Client ${{ env.VERSION }}
+
+            **Instalador:** `Automation Client Setup ${{ env.VERSION }}.exe`
+            **Portable:** `Automation Client ${{ env.VERSION }}.exe` (sem instalação)
+
+            ### Como usar
+            1. Baixe o arquivo abaixo
+            2. Execute o instalador (ou o portable diretamente)
+            3. O app abre na bandeja do sistema e aguarda conexão WebSocket
+
+            ### Requisitos
+            - Windows 10/11 x64
+            - **Nenhum** — Node.js não é necessário
+          draft: false
+          prerelease: false
+          files: dist/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── 8. Deploy para VPS (opcional — configure os secrets) ─────────────────
+      - name: Deploy .exe para VPS
+        if: ${{ github.event.inputs.deploy_to_vps == 'true' || github.ref == 'refs/heads/main' }}
+        uses: appleboy/scp-action@v0.1.7
+        continue-on-error: true   # não falha o build se VPS não estiver configurado
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          source: "dist/*.exe"
+          target: ${{ secrets.VPS_DIST_PATH || '/var/www/promoter/desktop-automation/dist' }}
+          strip_components: 1     # remove o prefixo "dist/" no destino
