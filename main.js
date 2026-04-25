@@ -6,6 +6,7 @@ const {
   Menu,
   nativeImage,
   screen,
+  globalShortcut,
 } = require("electron");
 const path = require("path");
 const fs = require("fs");
@@ -295,7 +296,9 @@ ipcMain.handle("start-pick-location", () => {
   const display = screen.getPrimaryDisplay();
   const { x, y, width, height } = display.bounds;
 
-  if (mainWindow) mainWindow.hide();
+  // NOTE: Do NOT hide mainWindow here. Hiding it causes the app to lose its
+  // Windows foreground rights, which prevents the overlay from stealing focus.
+  // We hide it inside ready-to-show, AFTER the overlay is already prepared.
 
   overlayWindow = new BrowserWindow({
     x,
@@ -303,8 +306,6 @@ ipcMain.handle("start-pick-location", () => {
     width,
     height,
     transparent: true,
-    // backgroundColor must be set so Windows routes click events to this window
-    // even on transparent/semi-transparent pixels (known Electron/Win32 issue)
     backgroundColor: "#00000001",
     frame: false,
     alwaysOnTop: true,
@@ -324,13 +325,27 @@ ipcMain.handle("start-pick-location", () => {
   overlayWindow.loadFile(path.join(__dirname, "renderer", "overlay.html"));
   overlayWindow.setAlwaysOnTop(true, "screen-saver");
 
+  // Emergency ESC via global shortcut — fires even if overlay has no window focus
+  globalShortcut.register("Escape", () => {
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      overlayWindow.destroy();
+    }
+  });
+
   overlayWindow.once("ready-to-show", () => {
+    // Hide main window only NOW, so the app keeps foreground rights until overlay is ready
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.hide();
+
     overlayWindow.setIgnoreMouseEvents(false);
     overlayWindow.show();
+    overlayWindow.moveTop();
+    // Force the Electron app to the Windows foreground so the overlay receives input
+    app.focus({ steal: true });
     overlayWindow.focus();
   });
 
   overlayWindow.on("closed", () => {
+    globalShortcut.unregister("Escape");
     overlayWindow = null;
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.show();
@@ -342,6 +357,7 @@ ipcMain.handle("start-pick-location", () => {
 });
 
 ipcMain.handle("pick-location-done", (event, coords) => {
+  globalShortcut.unregister("Escape");
   if (overlayWindow && !overlayWindow.isDestroyed()) {
     overlayWindow.destroy();
     overlayWindow = null;
@@ -370,6 +386,7 @@ ipcMain.handle("pick-location-done", (event, coords) => {
 });
 
 ipcMain.handle("cancel-pick-location", () => {
+  globalShortcut.unregister("Escape");
   if (overlayWindow && !overlayWindow.isDestroyed()) {
     overlayWindow.destroy();
     overlayWindow = null;
