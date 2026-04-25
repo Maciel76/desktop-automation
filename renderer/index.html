@@ -1,9 +1,12 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-br">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'"
+    />
     <title>Automation Client</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
@@ -42,7 +45,11 @@
           </div>
         </div>
 
-        <div class="current-code-row" id="current-code-row" style="display:none">
+        <div
+          class="current-code-row"
+          id="current-code-row"
+          style="display: none"
+        >
           <span class="current-code-prefix">Processando:</span>
           <span class="current-code-value" id="current-code-value"></span>
         </div>
@@ -62,7 +69,8 @@
           <button class="btn btn-primary" id="btn-send">Enviar</button>
         </div>
         <div class="ws-info">
-          WebSocket local: <strong>ws://localhost:<span id="ws-port-display">9099</span></strong>
+          WebSocket local:
+          <strong>ws://localhost:<span id="ws-port-display">9099</span></strong>
         </div>
       </div>
 
@@ -74,13 +82,19 @@
       </div>
 
       <!-- Config Panel -->
-      <div class="card config-panel" id="config-panel" style="display:none">
+      <div class="card config-panel" id="config-panel" style="display: none">
         <div class="card-title">Configurações</div>
 
         <div class="form-grid">
           <div class="form-group">
             <label>Porta WebSocket</label>
-            <input type="number" id="cfg-port" class="form-input" min="1024" max="65535" />
+            <input
+              type="number"
+              id="cfg-port"
+              class="form-input"
+              min="1024"
+              max="65535"
+            />
           </div>
           <div class="form-group">
             <label>Tecla após digitar</label>
@@ -95,11 +109,23 @@
           </div>
           <div class="form-group">
             <label>Delay após clique (ms)</label>
-            <input type="number" id="cfg-click-delay" class="form-input" min="50" max="2000" />
+            <input
+              type="number"
+              id="cfg-click-delay"
+              class="form-input"
+              min="50"
+              max="2000"
+            />
           </div>
           <div class="form-group">
             <label>Delay após digitar (ms)</label>
-            <input type="number" id="cfg-type-delay" class="form-input" min="50" max="2000" />
+            <input
+              type="number"
+              id="cfg-type-delay"
+              class="form-input"
+              min="50"
+              max="2000"
+            />
           </div>
         </div>
 
@@ -108,15 +134,22 @@
           <div class="pick-label">Posição do clique na tela</div>
           <div class="pick-row">
             <div class="pick-coords" id="pick-coords">
-              <span class="pick-coord-item">X: <strong id="pick-x-display">—</strong></span>
+              <span class="pick-coord-item"
+                >X: <strong id="pick-x-display">—</strong></span
+              >
               <span class="pick-divider">·</span>
-              <span class="pick-coord-item">Y: <strong id="pick-y-display">—</strong></span>
+              <span class="pick-coord-item"
+                >Y: <strong id="pick-y-display">—</strong></span
+              >
             </div>
             <button class="btn btn-pick" id="btn-pick-location">
               🎯 Pick Location
             </button>
           </div>
-          <div class="pick-hint">Clique em <em>Pick Location</em> e depois clique no campo do sistema externo</div>
+          <div class="pick-hint">
+            Clique em <em>Pick Location</em> e depois clique no campo do sistema
+            externo
+          </div>
           <!-- Manual override -->
           <div class="pick-manual-row">
             <div class="form-group-inline">
@@ -140,21 +173,38 @@
 
         <!-- Relay config -->
         <div class="relay-section">
-          <div class="relay-title">🌐 Relay (acesso pelo celular / outra rede)</div>
-          <div class="relay-hint">Preencha para enviar códigos de qualquer dispositivo via servidor. Deixe em branco para uso somente local.</div>
+          <div class="relay-title">
+            🌐 Relay (acesso pelo celular / outra rede)
+          </div>
+          <div class="relay-hint">
+            Preencha para enviar códigos de qualquer dispositivo via servidor.
+            Deixe em branco para uso somente local.
+          </div>
           <div class="form-group">
             <label>URL do servidor relay</label>
-            <input type="text" id="cfg-relay-url" class="form-input" placeholder="wss://seuservidor.com/ws/relay" />
+            <input
+              type="text"
+              id="cfg-relay-url"
+              class="form-input"
+              placeholder="wss://seuservidor.com/ws/relay"
+            />
           </div>
           <div class="form-group">
             <label>Device Token</label>
-            <input type="text" id="cfg-device-token" class="form-input" placeholder="Token configurado no servidor" />
+            <input
+              type="text"
+              id="cfg-device-token"
+              class="form-input"
+              placeholder="Token configurado no servidor"
+            />
           </div>
         </div>
 
         <div class="btn-row">
           <button class="btn btn-primary" id="btn-save-config">Salvar</button>
-          <button class="btn btn-secondary" id="btn-cancel-config">Cancelar</button>
+          <button class="btn btn-secondary" id="btn-cancel-config">
+            Cancelar
+          </button>
         </div>
       </div>
 
