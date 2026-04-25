@@ -80,22 +80,8 @@ function createTray() {
   // Use a simple default icon
   const icon = nativeImage.createEmpty();
   tray = new Tray(icon);
-
-  const contextMenu = Menu.buildFromTemplate([
-    { label: "Abrir", click: () => mainWindow && mainWindow.show() },
-    { type: "separator" },
-    {
-      label: "Sair",
-      click: () => {
-        mainWindow.destroy();
-        app.quit();
-      },
-    },
-  ]);
-
-  tray.setToolTip("Automation Client");
-  tray.setContextMenu(contextMenu);
   tray.on("click", () => mainWindow && mainWindow.show());
+  buildTrayMenu(false);
 }
 
 app.whenReady().then(() => {
@@ -281,64 +267,169 @@ ipcMain.handle("get-ws-port", () => {
   return config.wsPort || 9099;
 });
 
-// ── Pick Location ─────────────────────────────────────────────────────────────
+// ── Tray menu helpers ─────────────────────────────────────────────────────────
+
+function buildTrayMenu(picking = false) {
+  const items = picking
+    ? [
+        { label: "🔴 Aguardando clique na tela...", enabled: false },
+        { type: "separator" },
+        {
+          label: "Cancelar (ESC)",
+          click: () => cancelPickLocation(),
+        },
+      ]
+    : [
+        { label: "Abrir", click: () => mainWindow && mainWindow.show() },
+        { type: "separator" },
+        {
+          label: "Sair",
+          click: () => {
+            mainWindow.destroy();
+            app.quit();
+          },
+        },
+      ];
+  tray.setContextMenu(Menu.buildFromTemplate(items));
+  tray.setToolTip(
+    picking ? "🔴 Clique em qualquer lugar da tela..." : "Automation Client",
+  );
+}
+
+// ── Pick Location — PowerShell approach (no overlay window) ───────────────────
+//
+// Instead of an overlay / floating panel (both blocked by Windows 11 security),
+// we hide the main window, run a tiny PowerShell script that uses Win32
+// GetAsyncKeyState to wait for the NEXT left mouse click, reads CursorPos and
+// outputs "X,Y". No focus, no transparency, no permissions needed.
+
+let pickProcess = null;
+
+function cancelPickLocation() {
+  if (pickProcess) {
+    try {
+      pickProcess.kill();
+    } catch {
+      /* ignore */
+    }
+    pickProcess = null;
+  }
+  globalShortcut.unregister("Escape");
+  buildTrayMenu(false);
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.show();
+    mainWindow.focus();
+    sendToRenderer("pick-location-cancelled", {});
+  }
+}
 
 ipcMain.handle("get-cursor-position", () => {
   return screen.getCursorScreenPoint();
 });
 
 ipcMain.handle("start-pick-location", () => {
-  if (overlayWindow && !overlayWindow.isDestroyed()) {
-    overlayWindow.focus();
-    return { success: true };
+  if (pickProcess) return { success: true }; // already picking
+
+  // Hide the window so the user can freely click anywhere on the screen
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.hide();
+
+  buildTrayMenu(true);
+
+  // ESC emergency cancel via global shortcut (works without window focus)
+  try {
+    globalShortcut.register("Escape", cancelPickLocation);
+  } catch {
+    /* already registered */
   }
 
-  const display = screen.getPrimaryDisplay();
-  const { x: dx, y: dy, width: dw } = display.bounds;
+  // PowerShell script: wait for left-button RELEASE (to ignore the click that
+  // opened Pick Location), then wait for the next LEFT PRESS, output "X,Y".
+  // Also watches for ESC key to cancel cleanly.
+  const psScript = `
+Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+using System.Threading;
+public class MC {
+  [DllImport("user32.dll")] public static extern bool GetCursorPos(out POINT p);
+  [DllImport("user32.dll")] public static extern short GetAsyncKeyState(int v);
+  public struct POINT { public int X; public int Y; }
+  public static string Wait() {
+    // release phase — wait until the button that opened the picker is released
+    for (int i = 0; i < 200 && (GetAsyncKeyState(0x01) & 0x8000) != 0; i++) Thread.Sleep(20);
+    // click phase — wait for the NEXT left press or ESC
+    while (true) {
+      if ((GetAsyncKeyState(0x01) & 0x8000) != 0) {
+        POINT p; GetCursorPos(out p);
+        return p.X + "," + p.Y;
+      }
+      if ((GetAsyncKeyState(0x1B) & 0x8000) != 0) return "cancel";
+      Thread.Sleep(10);
+    }
+  }
+}
+"@
+Write-Output ([MC]::Wait())
+`;
 
-  // Use a small solid (non-transparent) floating panel instead of a full-screen
-  // transparent overlay. Transparent windows on Windows 11 do not reliably receive
-  // click events due to OS foreground-input restrictions, making the overlay unusable.
-  // The user moves the mouse freely, watches the live X/Y in the panel, then clicks
-  // "Confirmar" — no click-on-transparent-area required.
-  overlayWindow = new BrowserWindow({
-    x: dx + dw - 330,  // top-right corner, out of the way
-    y: dy + 50,
-    width: 310,
-    height: 205,
-    transparent: false,
-    frame: false,
-    alwaysOnTop: true,
-    skipTaskbar: true,
-    resizable: false,
-    movable: true,
-    focusable: true,
-    show: false,
-    webPreferences: {
-      preload: path.join(__dirname, "overlay-preload.js"),
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
+  const { spawn } = require("child_process");
+  let output = "";
+
+  pickProcess = spawn("powershell.exe", [
+    "-NoProfile",
+    "-NonInteractive",
+    "-WindowStyle",
+    "Hidden",
+    "-ExecutionPolicy",
+    "Bypass",
+    "-Command",
+    psScript,
+  ]);
+
+  pickProcess.stdout.on("data", (d) => {
+    output += d.toString();
   });
 
-  overlayWindow.loadFile(path.join(__dirname, "renderer", "picker.html"));
-  overlayWindow.setAlwaysOnTop(true, "screen-saver");
+  pickProcess.on("close", (code) => {
+    pickProcess = null;
+    globalShortcut.unregister("Escape");
+    buildTrayMenu(false);
 
-  // Global ESC as emergency exit in case the panel loses keyboard focus
-  globalShortcut.register("Escape", () => {
-    if (overlayWindow && !overlayWindow.isDestroyed()) {
-      overlayWindow.destroy();
+    const result = output.trim();
+    if (!result || result === "cancel" || code !== 0) {
+      // Cancelled or errored — just show the window back
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.show();
+        mainWindow.focus();
+        sendToRenderer("pick-location-cancelled", {});
+      }
+      return;
+    }
+
+    const [xStr, yStr] = result.split(",");
+    const x = parseInt(xStr, 10);
+    const y = parseInt(yStr, 10);
+
+    if (!isNaN(x) && !isNaN(y)) {
+      const config = loadConfig();
+      config.mouseX = x;
+      config.mouseY = y;
+      saveConfig(config);
+      logger.info(`Posição definida via Pick Location: X=${x}, Y=${y}`);
+      sendToRenderer("pick-location-result", { x, y });
+    }
+
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.show();
+      mainWindow.focus();
     }
   });
 
-  overlayWindow.once("ready-to-show", () => {
-    overlayWindow.show();
-    overlayWindow.focus();
-  });
-
-  overlayWindow.on("closed", () => {
+  pickProcess.on("error", (err) => {
+    pickProcess = null;
     globalShortcut.unregister("Escape");
-    overlayWindow = null;
+    buildTrayMenu(false);
+    logger.error(`Pick Location PS error: ${err.message}`);
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.show();
       mainWindow.focus();
@@ -348,45 +439,13 @@ ipcMain.handle("start-pick-location", () => {
   return { success: true };
 });
 
+// These handlers are kept for backward compat but are no longer the primary path
 ipcMain.handle("pick-location-done", (event, coords) => {
-  globalShortcut.unregister("Escape");
-  if (overlayWindow && !overlayWindow.isDestroyed()) {
-    overlayWindow.destroy();
-    overlayWindow = null;
-  }
-
-  if (coords && typeof coords.x === "number" && typeof coords.y === "number") {
-    const config = loadConfig();
-    config.mouseX = Math.round(coords.x);
-    config.mouseY = Math.round(coords.y);
-    saveConfig(config);
-    logger.info(
-      `Posição definida via Pick Location: X=${config.mouseX}, Y=${config.mouseY}`,
-    );
-    sendToRenderer("pick-location-result", {
-      x: config.mouseX,
-      y: config.mouseY,
-    });
-  }
-
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.show();
-    mainWindow.focus();
-  }
-
   return { success: true };
 });
 
 ipcMain.handle("cancel-pick-location", () => {
-  globalShortcut.unregister("Escape");
-  if (overlayWindow && !overlayWindow.isDestroyed()) {
-    overlayWindow.destroy();
-    overlayWindow = null;
-  }
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.show();
-    mainWindow.focus();
-  }
+  cancelPickLocation();
   return { success: true };
 });
 

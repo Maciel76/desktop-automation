@@ -1,8 +1,8 @@
 const api = window.overlayAPI;
 
-const coordsEl = document.getElementById('coords');
-const btnConfirm = document.getElementById('btn-confirm');
-const btnCancel = document.getElementById('btn-cancel');
+const coordsEl = document.getElementById("coords");
+const btnConfirm = document.getElementById("btn-confirm");
+const btnCancel = document.getElementById("btn-cancel");
 
 let currentCoords = { x: 0, y: 0 };
 let pollInterval = null;
@@ -28,12 +28,14 @@ async function confirm() {
   confirmed = true;
   clearInterval(pollInterval);
   btnConfirm.disabled = true;
-  btnConfirm.textContent = '⏳ Salvando...';
+  btnConfirm.textContent = "⏳ Salvando...";
   try {
     // Refresh coords one last time right before confirming
     const c = await api.getCursorPosition();
     currentCoords = c;
-  } catch { /* use last polled value */ }
+  } catch {
+    /* use last polled value */
+  }
   await api.done(currentCoords);
 }
 
@@ -44,10 +46,10 @@ async function cancel() {
   await api.cancel();
 }
 
-btnConfirm.addEventListener('click', confirm);
-btnCancel.addEventListener('click', cancel);
+btnConfirm.addEventListener("click", confirm);
+btnCancel.addEventListener("click", cancel);
 
-window.addEventListener('keydown', async (e) => {
-  if (e.key === 'Escape') await cancel();
-  if (e.key === 'Enter') await confirm();
+window.addEventListener("keydown", async (e) => {
+  if (e.key === "Escape") await cancel();
+  if (e.key === "Enter") await confirm();
 });
