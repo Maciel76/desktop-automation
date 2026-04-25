@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'" />
+    <title>Pick Location</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+
+      html, body {
+        width: 100vw;
+        height: 100vh;
+        overflow: hidden;
+        background: rgba(0, 0, 20, 0.55);
+        cursor: crosshair;
+        user-select: none;
+      }
+
+      /* Crosshair lines that follow the mouse */
+      #crosshair-h {
+        position: fixed;
+        top: 0; left: 0; right: 0;
+        height: 1px;
+        background: rgba(99, 102, 241, 0.7);
+        pointer-events: none;
+        transition: top 0.03s linear;
+      }
+      #crosshair-v {
+        position: fixed;
+        top: 0; bottom: 0; left: 0;
+        width: 1px;
+        background: rgba(99, 102, 241, 0.7);
+        pointer-events: none;
+        transition: left 0.03s linear;
+      }
+
+      /* Center dot that follows cursor */
+      #cursor-dot {
+        position: fixed;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        border: 2px solid #fff;
+        background: rgba(99, 102, 241, 0.8);
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        box-shadow: 0 0 0 3px rgba(99,102,241,0.3);
+        transition: left 0.03s linear, top 0.03s linear;
+      }
+
+      /* Coordinate tooltip following cursor */
+      #coords-tip {
+        position: fixed;
+        background: rgba(15, 17, 30, 0.92);
+        border: 1px solid rgba(99, 102, 241, 0.6);
+        color: #e2e8f0;
+        font-family: 'Consolas', 'Fira Code', monospace;
+        font-size: 13px;
+        padding: 6px 12px;
+        border-radius: 6px;
+        pointer-events: none;
+        white-space: nowrap;
+        backdrop-filter: blur(4px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      }
+
+      /* Top-center instruction banner */
+      #banner {
+        position: fixed;
+        top: 32px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(15, 17, 30, 0.9);
+        border: 1px solid rgba(99, 102, 241, 0.5);
+        color: #e2e8f0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        font-size: 15px;
+        padding: 12px 24px;
+        border-radius: 10px;
+        text-align: center;
+        line-height: 1.6;
+        backdrop-filter: blur(8px);
+        box-shadow: 0 4px 30px rgba(0,0,0,0.6);
+        pointer-events: none;
+      }
+      #banner strong { color: #818cf8; }
+      #banner .esc-hint { font-size: 12px; color: #64748b; margin-top: 4px; display: block; }
+
+      /* ESC button — bottom center */
+      #btn-cancel {
+        position: fixed;
+        bottom: 36px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(239, 68, 68, 0.15);
+        border: 1px solid rgba(239, 68, 68, 0.5);
+        color: #fca5a5;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        padding: 10px 28px;
+        border-radius: 8px;
+        cursor: pointer;
+        backdrop-filter: blur(4px);
+        letter-spacing: 0.3px;
+      }
+      #btn-cancel:hover { background: rgba(239, 68, 68, 0.3); }
+
+      /* Flash animation when clicking */
+      @keyframes flash {
+        0%   { background: rgba(99,102,241,0.5); }
+        100% { background: rgba(0, 0, 20, 0.55); }
+      }
+      body.flash { animation: flash 0.15s ease-out; }
+    </style>
+  </head>
+  <body>
+    <div id="crosshair-h"></div>
+    <div id="crosshair-v"></div>
+    <div id="cursor-dot"></div>
+    <div id="coords-tip">X: 0 &nbsp; Y: 0</div>
+
+    <div id="banner">
+      🎯 <strong>Clique na tela</strong> para definir a posição do clique automático<br>
+      <span class="esc-hint">Pressione ESC ou clique no botão abaixo para cancelar</span>
+    </div>
+
+    <button id="btn-cancel">✕ Cancelar (ESC)</button>
+
+    <script src="overlay.js"></script>
+  </body>
+</html>

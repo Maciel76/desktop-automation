@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'" />
+    <title>Automation Client</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <!-- Header -->
+      <header class="header">
+        <div class="header-left">
+          <div class="app-icon">⚡</div>
+          <div>
+            <h1>Automation Client</h1>
+            <span class="version">v1.0.0</span>
+          </div>
+        </div>
+        <div class="header-right">
+          <div class="badge" id="conn-badge">
+            <span class="dot" id="conn-dot"></span>
+            <span id="conn-label">Aguardando</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Status Card -->
+      <div class="card status-card">
+        <div class="status-row">
+          <div class="status-icon-wrap" id="status-icon-wrap">
+            <span id="status-icon">⏸</span>
+          </div>
+          <div class="status-info">
+            <div class="status-label" id="status-label">Aguardando código</div>
+            <div class="status-sub" id="status-sub">Sistema pronto</div>
+          </div>
+          <div class="queue-badge" id="queue-badge">
+            <span id="queue-count">0</span>
+            <span class="queue-label">na fila</span>
+          </div>
+        </div>
+
+        <div class="current-code-row" id="current-code-row" style="display:none">
+          <span class="current-code-prefix">Processando:</span>
+          <span class="current-code-value" id="current-code-value"></span>
+        </div>
+      </div>
+
+      <!-- Test Code -->
+      <div class="card">
+        <div class="card-title">Enviar Código de Teste</div>
+        <div class="test-row">
+          <input
+            type="text"
+            id="test-input"
+            class="test-input"
+            placeholder="Digite o código..."
+            maxlength="50"
+          />
+          <button class="btn btn-primary" id="btn-send">Enviar</button>
+        </div>
+        <div class="ws-info">
+          WebSocket local: <strong>ws://localhost:<span id="ws-port-display">9099</span></strong>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="actions-row">
+        <button class="btn btn-danger" id="btn-stop">⛔ Parar</button>
+        <button class="btn btn-secondary" id="btn-clear">🗑 Limpar Fila</button>
+        <button class="btn btn-secondary" id="btn-config">⚙ Config</button>
+      </div>
+
+      <!-- Config Panel -->
+      <div class="card config-panel" id="config-panel" style="display:none">
+        <div class="card-title">Configurações</div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Porta WebSocket</label>
+            <input type="number" id="cfg-port" class="form-input" min="1024" max="65535" />
+          </div>
+          <div class="form-group">
+            <label>Tecla após digitar</label>
+            <select id="cfg-key" class="form-input">
+              <option value="F5">F5</option>
+              <option value="F4">F4</option>
+              <option value="ENTER">Enter</option>
+              <option value="TAB">Tab</option>
+              <option value="F2">F2</option>
+              <option value="F3">F3</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Delay após clique (ms)</label>
+            <input type="number" id="cfg-click-delay" class="form-input" min="50" max="2000" />
+          </div>
+          <div class="form-group">
+            <label>Delay após digitar (ms)</label>
+            <input type="number" id="cfg-type-delay" class="form-input" min="50" max="2000" />
+          </div>
+        </div>
+
+        <!-- Pick Location -->
+        <div class="pick-location-block">
+          <div class="pick-label">Posição do clique na tela</div>
+          <div class="pick-row">
+            <div class="pick-coords" id="pick-coords">
+              <span class="pick-coord-item">X: <strong id="pick-x-display">—</strong></span>
+              <span class="pick-divider">·</span>
+              <span class="pick-coord-item">Y: <strong id="pick-y-display">—</strong></span>
+            </div>
+            <button class="btn btn-pick" id="btn-pick-location">
+              🎯 Pick Location
+            </button>
+          </div>
+          <div class="pick-hint">Clique em <em>Pick Location</em> e depois clique no campo do sistema externo</div>
+          <!-- Manual override -->
+          <div class="pick-manual-row">
+            <div class="form-group-inline">
+              <label>X</label>
+              <input type="number" id="cfg-x" class="form-input-sm" />
+            </div>
+            <div class="form-group-inline">
+              <label>Y</label>
+              <input type="number" id="cfg-y" class="form-input-sm" />
+            </div>
+            <span class="pick-manual-hint">ou ajuste manualmente</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="cfg-minimize" />
+            Minimizar janela antes de executar
+          </label>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btn-save-config">Salvar</button>
+          <button class="btn btn-secondary" id="btn-cancel-config">Cancelar</button>
+        </div>
+      </div>
+
+      <!-- Log -->
+      <div class="card log-card">
+        <div class="card-title-row">
+          <span class="card-title">Log de Execuções</span>
+          <button class="btn-link" id="btn-clear-log">limpar</button>
+        </div>
+        <div class="log-list" id="log-list">
+          <div class="log-empty">Nenhuma execução ainda</div>
+        </div>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>

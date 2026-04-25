@@ -1,0 +1,10 @@
+{
+  "wsPort": 9099,
+  "mouseX": 500,
+  "mouseY": 300,
+  "clickDelay": 200,
+  "clearDelay": 100,
+  "typeDelay": 200,
+  "keyAfterType": "F5",
+  "minimizeBeforeAction": true
+}
