@@ -1,4 +1,4 @@
-const { WebSocketServer, WebSocket } = require('ws');
+const { WebSocketServer, WebSocket } = require("ws");
 
 /**
  * Creates a WebSocket server that listens for incoming codes.
@@ -7,10 +7,10 @@ const { WebSocketServer, WebSocket } = require('ws');
 function createWebSocketServer(port, { onCode, onConnect, onDisconnect }) {
   const wss = new WebSocketServer({ port });
 
-  wss.on('connection', (ws) => {
+  wss.on("connection", (ws) => {
     onConnect && onConnect();
 
-    ws.on('message', (data) => {
+    ws.on("message", (data) => {
       try {
         const msg = JSON.parse(data.toString());
         if (msg && msg.codigo) {
@@ -21,20 +21,25 @@ function createWebSocketServer(port, { onCode, onConnect, onDisconnect }) {
       }
     });
 
-    ws.on('close', () => {
+    ws.on("close", () => {
       onDisconnect && onDisconnect();
     });
 
-    ws.on('error', () => {
+    ws.on("error", () => {
       onDisconnect && onDisconnect();
     });
 
     // Confirm connection
-    ws.send(JSON.stringify({ type: 'connected', message: 'Automation Client pronto' }));
+    ws.send(
+      JSON.stringify({
+        type: "connected",
+        message: "Automation Client pronto",
+      }),
+    );
   });
 
-  wss.on('error', (err) => {
-    console.error('[WS] Erro no servidor:', err.message);
+  wss.on("error", (err) => {
+    console.error("[WS] Erro no servidor:", err.message);
   });
 
   return wss;
@@ -53,7 +58,11 @@ function createWebSocketServer(port, { onCode, onConnect, onDisconnect }) {
  * @param {{ onCode, onConnect, onDisconnect }} callbacks
  * @returns {{ close: Function }} - call close() to permanently disconnect
  */
-function connectToRelay(relayUrl, deviceToken, { onCode, onConnect, onDisconnect }) {
+function connectToRelay(
+  relayUrl,
+  deviceToken,
+  { onCode, onConnect, onDisconnect },
+) {
   let ws = null;
   let stopped = false;
   let retryTimer = null;
@@ -65,13 +74,13 @@ function connectToRelay(relayUrl, deviceToken, { onCode, onConnect, onDisconnect
     const url = `${relayUrl}?type=device&token=${encodeURIComponent(deviceToken)}`;
     ws = new WebSocket(url);
 
-    ws.on('open', () => {
-      console.log('[Relay] Conectado ao servidor relay');
+    ws.on("open", () => {
+      console.log("[Relay] Conectado ao servidor relay");
       retryDelay = 5000; // reset backoff on successful connection
       onConnect && onConnect();
     });
 
-    ws.on('message', (data) => {
+    ws.on("message", (data) => {
       try {
         const msg = JSON.parse(data.toString());
         if (msg && msg.codigo) {
@@ -82,8 +91,12 @@ function connectToRelay(relayUrl, deviceToken, { onCode, onConnect, onDisconnect
       }
     });
 
-    ws.on('close', () => {
-      console.log('[Relay] Conexão encerrada. Reconectando em', retryDelay / 1000, 's...');
+    ws.on("close", () => {
+      console.log(
+        "[Relay] Conexão encerrada. Reconectando em",
+        retryDelay / 1000,
+        "s...",
+      );
       onDisconnect && onDisconnect();
       if (!stopped) {
         retryTimer = setTimeout(() => {
@@ -93,8 +106,8 @@ function connectToRelay(relayUrl, deviceToken, { onCode, onConnect, onDisconnect
       }
     });
 
-    ws.on('error', (err) => {
-      console.error('[Relay] Erro:', err.message);
+    ws.on("error", (err) => {
+      console.error("[Relay] Erro:", err.message);
       // close event will handle reconnect
     });
   }
@@ -111,4 +124,3 @@ function connectToRelay(relayUrl, deviceToken, { onCode, onConnect, onDisconnect
 }
 
 module.exports = { createWebSocketServer, connectToRelay };
-

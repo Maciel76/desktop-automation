@@ -10,7 +10,10 @@ const {
 } = require("electron");
 const path = require("path");
 const fs = require("fs");
-const { createWebSocketServer, connectToRelay } = require("./src/communicationService");
+const {
+  createWebSocketServer,
+  connectToRelay,
+} = require("./src/communicationService");
 const { createQueue } = require("./src/queueService");
 const { executeAutomation } = require("./src/automationService");
 const logger = require("./src/logger");
@@ -181,7 +184,7 @@ app.whenReady().then(() => {
         });
       },
       onConnect: () => {
-        logger.info('[Relay] Conectado ao servidor');
+        logger.info("[Relay] Conectado ao servidor");
         sendToRenderer("connection-update", { connected: true, relay: true });
       },
       onDisconnect: () => {
@@ -231,23 +234,36 @@ ipcMain.handle("save-config", (event, config) => {
       config.deviceToken !== currentConfig.deviceToken;
 
     if (relayChanged) {
-      if (relayClient) { relayClient.close(); relayClient = null; }
+      if (relayClient) {
+        relayClient.close();
+        relayClient = null;
+      }
       if (config.serverRelayUrl && config.deviceToken) {
-        relayClient = connectToRelay(config.serverRelayUrl, config.deviceToken, {
-          onCode: (codigo) => {
-            if (!isRunning) return;
-            queue.add({ codigo });
-            sendToRenderer("status-update", {
-              status: "queued",
-              currentCode: null,
-              queueSize: queue.size(),
-            });
+        relayClient = connectToRelay(
+          config.serverRelayUrl,
+          config.deviceToken,
+          {
+            onCode: (codigo) => {
+              if (!isRunning) return;
+              queue.add({ codigo });
+              sendToRenderer("status-update", {
+                status: "queued",
+                currentCode: null,
+                queueSize: queue.size(),
+              });
+            },
+            onConnect: () =>
+              sendToRenderer("connection-update", {
+                connected: true,
+                relay: true,
+              }),
+            onDisconnect: () =>
+              sendToRenderer("connection-update", {
+                connected: false,
+                relay: true,
+              }),
           },
-          onConnect: () =>
-            sendToRenderer("connection-update", { connected: true, relay: true }),
-          onDisconnect: () =>
-            sendToRenderer("connection-update", { connected: false, relay: true }),
-        });
+        );
       }
     }
 

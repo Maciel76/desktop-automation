@@ -138,6 +138,20 @@
           </label>
         </div>
 
+        <!-- Relay config -->
+        <div class="relay-section">
+          <div class="relay-title">🌐 Relay (acesso pelo celular / outra rede)</div>
+          <div class="relay-hint">Preencha para enviar códigos de qualquer dispositivo via servidor. Deixe em branco para uso somente local.</div>
+          <div class="form-group">
+            <label>URL do servidor relay</label>
+            <input type="text" id="cfg-relay-url" class="form-input" placeholder="wss://seuservidor.com/ws/relay" />
+          </div>
+          <div class="form-group">
+            <label>Device Token</label>
+            <input type="text" id="cfg-device-token" class="form-input" placeholder="Token configurado no servidor" />
+          </div>
+        </div>
+
         <div class="btn-row">
           <button class="btn btn-primary" id="btn-save-config">Salvar</button>
           <button class="btn btn-secondary" id="btn-cancel-config">Cancelar</button>

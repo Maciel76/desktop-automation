@@ -34,6 +34,8 @@ const cfgY = document.getElementById("cfg-y");
 const cfgClickDelay = document.getElementById("cfg-click-delay");
 const cfgTypeDelay = document.getElementById("cfg-type-delay");
 const cfgMinimize = document.getElementById("cfg-minimize");
+const cfgRelayUrl = document.getElementById("cfg-relay-url");
+const cfgDeviceToken = document.getElementById("cfg-device-token");
 
 // --- Pick Location elements ---
 const btnPickLocation = document.getElementById("btn-pick-location");
@@ -93,10 +95,10 @@ function applyStatus(data) {
 function applyConnection(data) {
   if (data.connected) {
     connDot.className = "dot connected";
-    connLabel.textContent = "Conectado";
+    connLabel.textContent = data.relay ? "Relay ativo" : "Conectado";
   } else {
     connDot.className = "dot";
-    connLabel.textContent = "Aguardando";
+    connLabel.textContent = data.relay ? "Relay desconectado" : "Aguardando";
   }
 }
 
@@ -151,6 +153,8 @@ async function loadConfigIntoForm() {
   cfgClickDelay.value = config.clickDelay || 200;
   cfgTypeDelay.value = config.typeDelay || 200;
   cfgMinimize.checked = config.minimizeBeforeAction !== false;
+  cfgRelayUrl.value = config.serverRelayUrl || "";
+  cfgDeviceToken.value = config.deviceToken || "";
 
   // Sync pick location display
   pickXDisplay.textContent = config.mouseX || 500;
@@ -216,6 +220,8 @@ btnSaveConfig.addEventListener("click", async () => {
     clickDelay: parseInt(cfgClickDelay.value, 10) || 200,
     typeDelay: parseInt(cfgTypeDelay.value, 10) || 200,
     minimizeBeforeAction: cfgMinimize.checked,
+    serverRelayUrl: cfgRelayUrl.value.trim(),
+    deviceToken: cfgDeviceToken.value.trim(),
   };
 
   const result = await api.saveConfig(config);
