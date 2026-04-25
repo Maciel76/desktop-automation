@@ -3,6 +3,7 @@
   "version": "1.1.5",
   "description": "Cliente desktop para automação de digitação em sistema de preços",
   "author": "Promoter Manager",
+  "copyright": "Copyright © 2025 Promoter Manager",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -42,7 +43,11 @@
           ]
         }
       ],
-      "publisherName": "Promoter Manager"
+      "publisherName": "Promoter Manager",
+      "companyName": "Promoter Manager",
+      "legalTrademarks": "Promoter Manager",
+      "fileDescription": "Automation Client - Promoter Manager",
+      "verifyUpdateCodeSignature": false
     },
     "nsis": {
       "oneClick": false,
