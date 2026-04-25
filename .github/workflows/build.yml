@@ -9,13 +9,17 @@ on:
       - '**.html'
       - '**.css'
       - '.github/workflows/build.yml'
-  workflow_dispatch:           # permite rodar manualmente pelo GitHub UI
+  workflow_dispatch:
     inputs:
       deploy_to_vps:
         description: 'Copiar .exe para o VPS após o build?'
         required: false
         default: 'false'
         type: boolean
+
+# ── Permissões necessárias para criar Releases ───────────────────────────────
+permissions:
+  contents: write
 
 jobs:
   build:
