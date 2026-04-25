@@ -276,6 +276,7 @@ ipcMain.handle('start-pick-location', () => {
     resizable: false,
     movable: false,
     focusable: true,
+    show: false,
     webPreferences: {
       preload: path.join(__dirname, 'overlay-preload.js'),
       contextIsolation: true,
@@ -285,6 +286,12 @@ ipcMain.handle('start-pick-location', () => {
 
   overlayWindow.loadFile(path.join(__dirname, 'renderer', 'overlay.html'));
   overlayWindow.setAlwaysOnTop(true, 'screen-saver');
+
+  overlayWindow.once('ready-to-show', () => {
+    overlayWindow.show();
+    overlayWindow.focus();
+    overlayWindow.setIgnoreMouseEvents(false);
+  });
 
   overlayWindow.on('closed', () => {
     overlayWindow = null;

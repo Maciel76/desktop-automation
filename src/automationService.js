@@ -1,4 +1,7 @@
-const { spawnSync } = require('child_process');
+const { spawn } = require('child_process');
+const os = require('os');
+const path = require('path');
+const fs = require('fs');
 
 // Maps friendly key names to SendKeys format
 const KEY_MAP = {
@@ -17,16 +20,16 @@ function toSendKeysFormat(key) {
   return KEY_MAP[upper] || `{${upper}}`;
 }
 
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 /**
  * Executes PowerShell automation:
  * 1. Move mouse to (x, y) and click
  * 2. Ctrl+A + Backspace to clear field
  * 3. Paste text via clipboard (Ctrl+V)
  * 4. Press configured key
+ *
+ * Uses a temp .ps1 file to avoid command-line length limits and
+ * PowerShell string-interpolation issues (e.g. $ in product codes).
+ * Uses async spawn to avoid blocking the Electron main thread.
  */
 async function executeAutomation(codigo, config) {
   const {
@@ -40,10 +43,19 @@ async function executeAutomation(codigo, config) {
 
   const sendKey = toSendKeysFormat(keyAfterType);
 
-  // Escape double quotes in codigo for PowerShell
-  const safeCode = String(codigo).replace(/"/g, '""').replace(/'/g, "''");
-
+  // Script uses param block — code is passed as a separate argument,
+  // so no string-interpolation or escaping issues regardless of content.
   const psScript = `
+param(
+  [string]$Code,
+  [int]$X,
+  [int]$Y,
+  [int]$ClickDelay,
+  [int]$ClearDelay,
+  [int]$TypeDelay,
+  [string]$SendKey
+)
+
 Add-Type -TypeDefinition @"
 using System;
 using System.Runtime.InteropServices;
@@ -57,47 +69,78 @@ public class Win32Utils {
 Add-Type -AssemblyName System.Windows.Forms
 
 # Move mouse and click
-[Win32Utils]::SetCursorPos(${mouseX}, ${mouseY})
+[Win32Utils]::SetCursorPos($X, $Y)
 Start-Sleep -Milliseconds 100
 [Win32Utils]::mouse_event(0x0002, 0, 0, 0, [IntPtr]::Zero)
 [Win32Utils]::mouse_event(0x0004, 0, 0, 0, [IntPtr]::Zero)
-Start-Sleep -Milliseconds ${clickDelay}
+Start-Sleep -Milliseconds $ClickDelay
 
 # Clear field
 [System.Windows.Forms.SendKeys]::SendWait("^a")
 Start-Sleep -Milliseconds 50
 [System.Windows.Forms.SendKeys]::SendWait("{BACKSPACE}")
-Start-Sleep -Milliseconds ${clearDelay}
+Start-Sleep -Milliseconds $ClearDelay
 
-# Type via clipboard to avoid character escaping issues
-[System.Windows.Forms.Clipboard]::SetText("${safeCode}")
+# Paste via clipboard — code passed as param, safe for any content
+[System.Windows.Forms.Clipboard]::SetText($Code)
 [System.Windows.Forms.SendKeys]::SendWait("^v")
-Start-Sleep -Milliseconds ${typeDelay}
+Start-Sleep -Milliseconds $TypeDelay
 
 # Press configured key
-[System.Windows.Forms.SendKeys]::SendWait("${sendKey}")
+[System.Windows.Forms.SendKeys]::SendWait($SendKey)
 `;
 
-  const result = spawnSync('powershell.exe', [
-    '-NoProfile',
-    '-NonInteractive',
-    '-WindowStyle', 'Hidden',
-    '-Command', psScript,
-  ], {
-    encoding: 'utf8',
-    timeout: 15000,
+  const tempFile = path.join(os.tmpdir(), `automation_${process.pid}_${Date.now()}.ps1`);
+  fs.writeFileSync(tempFile, psScript, 'utf8');
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const settle = (fn, val) => {
+      if (!settled) {
+        settled = true;
+        clearTimeout(timer);
+        fn(val);
+      }
+    };
+
+    const ps = spawn('powershell.exe', [
+      '-NoProfile',
+      '-NonInteractive',
+      '-WindowStyle', 'Hidden',
+      '-ExecutionPolicy', 'Bypass',
+      '-File', tempFile,
+      '-Code', String(codigo),
+      '-X', String(mouseX),
+      '-Y', String(mouseY),
+      '-ClickDelay', String(clickDelay),
+      '-ClearDelay', String(clearDelay),
+      '-TypeDelay', String(typeDelay),
+      '-SendKey', sendKey,
+    ]);
+
+    let stderr = '';
+    ps.stderr.on('data', (d) => { stderr += d.toString(); });
+
+    ps.on('close', (code) => {
+      try { fs.unlinkSync(tempFile); } catch { /* ignore cleanup errors */ }
+      if (code !== 0) {
+        settle(reject, new Error(`PowerShell falhou (código ${code}): ${(stderr || 'Erro desconhecido').slice(0, 300)}`));
+      } else {
+        settle(resolve, undefined);
+      }
+    });
+
+    ps.on('error', (err) => {
+      try { fs.unlinkSync(tempFile); } catch { /* ignore */ }
+      settle(reject, new Error(`Erro ao executar PowerShell: ${err.message}`));
+    });
+
+    const timer = setTimeout(() => {
+      ps.kill();
+      try { fs.unlinkSync(tempFile); } catch { /* ignore */ }
+      settle(reject, new Error('PowerShell timeout após 15 segundos'));
+    }, 15000);
   });
-
-  if (result.error) {
-    throw new Error(`Erro ao executar PowerShell: ${result.error.message}`);
-  }
-
-  if (result.status !== 0) {
-    const errMsg = result.stderr || result.stdout || 'Erro desconhecido no PowerShell';
-    throw new Error(`PowerShell falhou (código ${result.status}): ${errMsg.slice(0, 300)}`);
-  }
-
-  await delay(100);
 }
 
 module.exports = { executeAutomation, toSendKeysFormat };
