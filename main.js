@@ -10,7 +10,7 @@ const {
 } = require("electron");
 const path = require("path");
 const fs = require("fs");
-const { createWebSocketServer } = require("./src/communicationService");
+const { createWebSocketServer, connectToRelay } = require("./src/communicationService");
 const { createQueue } = require("./src/queueService");
 const { executeAutomation } = require("./src/automationService");
 const logger = require("./src/logger");
@@ -18,6 +18,7 @@ const logger = require("./src/logger");
 let mainWindow = null;
 let tray = null;
 let wsServer = null;
+let relayClient = null;
 let queue = null;
 let isRunning = true;
 let overlayWindow = null;
@@ -138,7 +139,7 @@ app.whenReady().then(() => {
     });
   });
 
-  // Start WebSocket server
+  // Start WebSocket server (local, for same-PC usage)
   wsServer = createWebSocketServer(config.wsPort, {
     onCode: (codigo) => {
       if (!isRunning) {
@@ -163,6 +164,32 @@ app.whenReady().then(() => {
     },
   });
 
+  // Connect to backend relay (if configured)
+  if (config.serverRelayUrl && config.deviceToken) {
+    relayClient = connectToRelay(config.serverRelayUrl, config.deviceToken, {
+      onCode: (codigo) => {
+        if (!isRunning) {
+          logger.warn(`[Relay] Código recebido mas sistema pausado: ${codigo}`);
+          return;
+        }
+        logger.info(`[Relay] Código recebido: ${codigo}`);
+        queue.add({ codigo });
+        sendToRenderer("status-update", {
+          status: "queued",
+          currentCode: null,
+          queueSize: queue.size(),
+        });
+      },
+      onConnect: () => {
+        logger.info('[Relay] Conectado ao servidor');
+        sendToRenderer("connection-update", { connected: true, relay: true });
+      },
+      onDisconnect: () => {
+        sendToRenderer("connection-update", { connected: false, relay: true });
+      },
+    });
+  }
+
   sendToRenderer("status-update", {
     status: "idle",
     currentCode: null,
@@ -175,9 +202,10 @@ ipcMain.handle("get-config", () => loadConfig());
 
 ipcMain.handle("save-config", (event, config) => {
   try {
-    saveConfig(config);
-    // Restart WebSocket server on port change
     const currentConfig = loadConfig();
+    saveConfig(config);
+
+    // Restart local WebSocket server if port changed
     if (wsServer && config.wsPort !== currentConfig.wsPort) {
       wsServer.close();
       wsServer = createWebSocketServer(config.wsPort, {
@@ -196,6 +224,33 @@ ipcMain.handle("save-config", (event, config) => {
           sendToRenderer("connection-update", { connected: false }),
       });
     }
+
+    // Restart relay client if relay settings changed
+    const relayChanged =
+      config.serverRelayUrl !== currentConfig.serverRelayUrl ||
+      config.deviceToken !== currentConfig.deviceToken;
+
+    if (relayChanged) {
+      if (relayClient) { relayClient.close(); relayClient = null; }
+      if (config.serverRelayUrl && config.deviceToken) {
+        relayClient = connectToRelay(config.serverRelayUrl, config.deviceToken, {
+          onCode: (codigo) => {
+            if (!isRunning) return;
+            queue.add({ codigo });
+            sendToRenderer("status-update", {
+              status: "queued",
+              currentCode: null,
+              queueSize: queue.size(),
+            });
+          },
+          onConnect: () =>
+            sendToRenderer("connection-update", { connected: true, relay: true }),
+          onDisconnect: () =>
+            sendToRenderer("connection-update", { connected: false, relay: true }),
+        });
+      }
+    }
+
     return { success: true };
   } catch (err) {
     return { success: false, error: err.message };

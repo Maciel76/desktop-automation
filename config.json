@@ -6,5 +6,8 @@
   "clearDelay": 100,
   "typeDelay": 200,
   "keyAfterType": "F5",
-  "minimizeBeforeAction": true
+  "minimizeBeforeAction": true,
+  "serverRelayUrl": "",
+  "deviceToken": ""
 }
+
