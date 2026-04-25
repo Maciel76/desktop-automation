@@ -44,9 +44,7 @@
         }
       ],
       "publisherName": "Promoter Manager",
-      "companyName": "Promoter Manager",
       "legalTrademarks": "Promoter Manager",
-      "fileDescription": "Automation Client - Promoter Manager",
       "verifyUpdateCodeSignature": false
     },
     "nsis": {
