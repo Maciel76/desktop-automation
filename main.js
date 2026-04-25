@@ -294,27 +294,26 @@ ipcMain.handle("start-pick-location", () => {
   }
 
   const display = screen.getPrimaryDisplay();
-  const { x, y, width, height } = display.bounds;
+  const { x: dx, y: dy, width: dw } = display.bounds;
 
-  // NOTE: Do NOT hide mainWindow here. Hiding it causes the app to lose its
-  // Windows foreground rights, which prevents the overlay from stealing focus.
-  // We hide it inside ready-to-show, AFTER the overlay is already prepared.
-
+  // Use a small solid (non-transparent) floating panel instead of a full-screen
+  // transparent overlay. Transparent windows on Windows 11 do not reliably receive
+  // click events due to OS foreground-input restrictions, making the overlay unusable.
+  // The user moves the mouse freely, watches the live X/Y in the panel, then clicks
+  // "Confirmar" — no click-on-transparent-area required.
   overlayWindow = new BrowserWindow({
-    x,
-    y,
-    width,
-    height,
-    transparent: true,
-    backgroundColor: "#00000001",
+    x: dx + dw - 330,  // top-right corner, out of the way
+    y: dy + 50,
+    width: 310,
+    height: 205,
+    transparent: false,
     frame: false,
     alwaysOnTop: true,
     skipTaskbar: true,
     resizable: false,
-    movable: false,
+    movable: true,
     focusable: true,
     show: false,
-    hasShadow: false,
     webPreferences: {
       preload: path.join(__dirname, "overlay-preload.js"),
       contextIsolation: true,
@@ -322,10 +321,10 @@ ipcMain.handle("start-pick-location", () => {
     },
   });
 
-  overlayWindow.loadFile(path.join(__dirname, "renderer", "overlay.html"));
+  overlayWindow.loadFile(path.join(__dirname, "renderer", "picker.html"));
   overlayWindow.setAlwaysOnTop(true, "screen-saver");
 
-  // Emergency ESC via global shortcut — fires even if overlay has no window focus
+  // Global ESC as emergency exit in case the panel loses keyboard focus
   globalShortcut.register("Escape", () => {
     if (overlayWindow && !overlayWindow.isDestroyed()) {
       overlayWindow.destroy();
@@ -333,14 +332,7 @@ ipcMain.handle("start-pick-location", () => {
   });
 
   overlayWindow.once("ready-to-show", () => {
-    // Hide main window only NOW, so the app keeps foreground rights until overlay is ready
-    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.hide();
-
-    overlayWindow.setIgnoreMouseEvents(false);
     overlayWindow.show();
-    overlayWindow.moveTop();
-    // Force the Electron app to the Windows foreground so the overlay receives input
-    app.focus({ steal: true });
     overlayWindow.focus();
   });
 
