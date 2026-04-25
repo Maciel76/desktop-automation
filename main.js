@@ -1,10 +1,18 @@
-const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, screen } = require('electron');
-const path = require('path');
-const fs = require('fs');
-const { createWebSocketServer } = require('./src/communicationService');
-const { createQueue } = require('./src/queueService');
-const { executeAutomation } = require('./src/automationService');
-const logger = require('./src/logger');
+const {
+  app,
+  BrowserWindow,
+  ipcMain,
+  Tray,
+  Menu,
+  nativeImage,
+  screen,
+} = require("electron");
+const path = require("path");
+const fs = require("fs");
+const { createWebSocketServer } = require("./src/communicationService");
+const { createQueue } = require("./src/queueService");
+const { executeAutomation } = require("./src/automationService");
+const logger = require("./src/logger");
 
 let mainWindow = null;
 let tray = null;
@@ -15,27 +23,27 @@ let overlayWindow = null;
 
 // Load config
 function loadConfig() {
-  const configPath = path.join(app.getPath('userData'), 'config.json');
-  const defaultConfigPath = path.join(__dirname, 'config.json');
+  const configPath = path.join(app.getPath("userData"), "config.json");
+  const defaultConfigPath = path.join(__dirname, "config.json");
 
   if (!fs.existsSync(configPath)) {
     fs.copyFileSync(defaultConfigPath, configPath);
   }
 
   try {
-    return JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    return JSON.parse(fs.readFileSync(configPath, "utf8"));
   } catch {
-    return JSON.parse(fs.readFileSync(defaultConfigPath, 'utf8'));
+    return JSON.parse(fs.readFileSync(defaultConfigPath, "utf8"));
   }
 }
 
 function saveConfig(config) {
-  const configPath = path.join(app.getPath('userData'), 'config.json');
-  fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf8');
+  const configPath = path.join(app.getPath("userData"), "config.json");
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2), "utf8");
 }
 
 function getConfigPath() {
-  return path.join(app.getPath('userData'), 'config.json');
+  return path.join(app.getPath("userData"), "config.json");
 }
 
 function sendToRenderer(channel, data) {
@@ -51,17 +59,17 @@ function createWindow() {
     minWidth: 480,
     minHeight: 500,
     resizable: true,
-    title: 'Automation Client',
+    title: "Automation Client",
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
     },
   });
 
-  mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+  mainWindow.loadFile(path.join(__dirname, "renderer", "index.html"));
 
-  mainWindow.on('close', (e) => {
+  mainWindow.on("close", (e) => {
     e.preventDefault();
     mainWindow.hide();
   });
@@ -73,14 +81,20 @@ function createTray() {
   tray = new Tray(icon);
 
   const contextMenu = Menu.buildFromTemplate([
-    { label: 'Abrir', click: () => mainWindow && mainWindow.show() },
-    { type: 'separator' },
-    { label: 'Sair', click: () => { mainWindow.destroy(); app.quit(); } },
+    { label: "Abrir", click: () => mainWindow && mainWindow.show() },
+    { type: "separator" },
+    {
+      label: "Sair",
+      click: () => {
+        mainWindow.destroy();
+        app.quit();
+      },
+    },
   ]);
 
-  tray.setToolTip('Automation Client');
+  tray.setToolTip("Automation Client");
   tray.setContextMenu(contextMenu);
-  tray.on('click', () => mainWindow && mainWindow.show());
+  tray.on("click", () => mainWindow && mainWindow.show());
 }
 
 app.whenReady().then(() => {
@@ -93,8 +107,8 @@ app.whenReady().then(() => {
   queue = createQueue(async (item) => {
     if (!isRunning) return;
 
-    sendToRenderer('status-update', {
-      status: 'processing',
+    sendToRenderer("status-update", {
+      status: "processing",
       currentCode: item.codigo,
       queueSize: queue.size(),
     });
@@ -109,29 +123,29 @@ app.whenReady().then(() => {
       await executeAutomation(item.codigo, currentConfig);
 
       logger.info(`Código executado com sucesso: ${item.codigo}`);
-      sendToRenderer('log-entry', {
+      sendToRenderer("log-entry", {
         time: new Date().toISOString(),
         code: item.codigo,
-        status: 'success',
-        message: 'Automação executada com sucesso',
+        status: "success",
+        message: "Automação executada com sucesso",
       });
     } catch (err) {
       logger.error(`Erro ao executar código ${item.codigo}: ${err.message}`);
-      sendToRenderer('log-entry', {
+      sendToRenderer("log-entry", {
         time: new Date().toISOString(),
         code: item.codigo,
-        status: 'error',
+        status: "error",
         message: err.message,
       });
-      sendToRenderer('status-update', {
-        status: 'error',
+      sendToRenderer("status-update", {
+        status: "error",
         currentCode: null,
         queueSize: queue.size(),
       });
     }
 
-    sendToRenderer('status-update', {
-      status: queue.size() > 0 ? 'processing' : 'idle',
+    sendToRenderer("status-update", {
+      status: queue.size() > 0 ? "processing" : "idle",
       currentCode: null,
       queueSize: queue.size(),
     });
@@ -148,27 +162,31 @@ app.whenReady().then(() => {
       logger.info(`Código recebido: ${codigo}`);
       queue.add({ codigo });
 
-      sendToRenderer('status-update', {
-        status: 'queued',
+      sendToRenderer("status-update", {
+        status: "queued",
         currentCode: null,
         queueSize: queue.size(),
       });
     },
     onConnect: () => {
-      sendToRenderer('connection-update', { connected: true });
+      sendToRenderer("connection-update", { connected: true });
     },
     onDisconnect: () => {
-      sendToRenderer('connection-update', { connected: false });
+      sendToRenderer("connection-update", { connected: false });
     },
   });
 
-  sendToRenderer('status-update', { status: 'idle', currentCode: null, queueSize: 0 });
+  sendToRenderer("status-update", {
+    status: "idle",
+    currentCode: null,
+    queueSize: 0,
+  });
 });
 
 // IPC Handlers
-ipcMain.handle('get-config', () => loadConfig());
+ipcMain.handle("get-config", () => loadConfig());
 
-ipcMain.handle('save-config', (event, config) => {
+ipcMain.handle("save-config", (event, config) => {
   try {
     saveConfig(config);
     // Restart WebSocket server on port change
@@ -179,14 +197,16 @@ ipcMain.handle('save-config', (event, config) => {
         onCode: (codigo) => {
           if (!isRunning) return;
           queue.add({ codigo });
-          sendToRenderer('status-update', {
-            status: 'queued',
+          sendToRenderer("status-update", {
+            status: "queued",
             currentCode: null,
             queueSize: queue.size(),
           });
         },
-        onConnect: () => sendToRenderer('connection-update', { connected: true }),
-        onDisconnect: () => sendToRenderer('connection-update', { connected: false }),
+        onConnect: () =>
+          sendToRenderer("connection-update", { connected: true }),
+        onDisconnect: () =>
+          sendToRenderer("connection-update", { connected: false }),
       });
     }
     return { success: true };
@@ -195,15 +215,16 @@ ipcMain.handle('save-config', (event, config) => {
   }
 });
 
-ipcMain.handle('send-test-code', (event, codigo) => {
-  if (!isRunning) return { success: false, error: 'Sistema pausado' };
-  if (!codigo || !codigo.trim()) return { success: false, error: 'Código vazio' };
+ipcMain.handle("send-test-code", (event, codigo) => {
+  if (!isRunning) return { success: false, error: "Sistema pausado" };
+  if (!codigo || !codigo.trim())
+    return { success: false, error: "Código vazio" };
 
   logger.info(`Código de teste enviado manualmente: ${codigo}`);
   queue.add({ codigo: codigo.trim() });
 
-  sendToRenderer('status-update', {
-    status: 'queued',
+  sendToRenderer("status-update", {
+    status: "queued",
     currentCode: null,
     queueSize: queue.size(),
   });
@@ -211,49 +232,61 @@ ipcMain.handle('send-test-code', (event, codigo) => {
   return { success: true };
 });
 
-ipcMain.handle('toggle-running', () => {
+ipcMain.handle("toggle-running", () => {
   isRunning = !isRunning;
-  sendToRenderer('running-update', { running: isRunning });
-  logger.info(`Sistema ${isRunning ? 'retomado' : 'pausado'}`);
+  sendToRenderer("running-update", { running: isRunning });
+  logger.info(`Sistema ${isRunning ? "retomado" : "pausado"}`);
   return { running: isRunning };
 });
 
-ipcMain.handle('clear-queue', () => {
+ipcMain.handle("clear-queue", () => {
   queue.clear();
-  sendToRenderer('status-update', { status: 'idle', currentCode: null, queueSize: 0 });
+  sendToRenderer("status-update", {
+    status: "idle",
+    currentCode: null,
+    queueSize: 0,
+  });
   return { success: true };
 });
 
-ipcMain.handle('get-logs', () => {
+ipcMain.handle("get-logs", () => {
   try {
-    const logPath = path.join(app.getPath('userData'), 'logs', 'automation.log');
+    const logPath = path.join(
+      app.getPath("userData"),
+      "logs",
+      "automation.log",
+    );
     if (!fs.existsSync(logPath)) return [];
-    const content = fs.readFileSync(logPath, 'utf8');
+    const content = fs.readFileSync(logPath, "utf8");
     return content
       .trim()
-      .split('\n')
+      .split("\n")
       .filter(Boolean)
       .slice(-100)
       .map((line) => {
-        try { return JSON.parse(line); } catch { return { message: line }; }
+        try {
+          return JSON.parse(line);
+        } catch {
+          return { message: line };
+        }
       });
   } catch {
     return [];
   }
 });
 
-ipcMain.handle('get-ws-port', () => {
+ipcMain.handle("get-ws-port", () => {
   const config = loadConfig();
   return config.wsPort || 9099;
 });
 
 // ── Pick Location ─────────────────────────────────────────────────────────────
 
-ipcMain.handle('get-cursor-position', () => {
+ipcMain.handle("get-cursor-position", () => {
   return screen.getCursorScreenPoint();
 });
 
-ipcMain.handle('start-pick-location', () => {
+ipcMain.handle("start-pick-location", () => {
   if (overlayWindow && !overlayWindow.isDestroyed()) {
     overlayWindow.focus();
     return { success: true };
@@ -270,6 +303,9 @@ ipcMain.handle('start-pick-location', () => {
     width,
     height,
     transparent: true,
+    // backgroundColor must be set so Windows routes click events to this window
+    // even on transparent/semi-transparent pixels (known Electron/Win32 issue)
+    backgroundColor: "#00000001",
     frame: false,
     alwaysOnTop: true,
     skipTaskbar: true,
@@ -277,23 +313,24 @@ ipcMain.handle('start-pick-location', () => {
     movable: false,
     focusable: true,
     show: false,
+    hasShadow: false,
     webPreferences: {
-      preload: path.join(__dirname, 'overlay-preload.js'),
+      preload: path.join(__dirname, "overlay-preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
     },
   });
 
-  overlayWindow.loadFile(path.join(__dirname, 'renderer', 'overlay.html'));
-  overlayWindow.setAlwaysOnTop(true, 'screen-saver');
+  overlayWindow.loadFile(path.join(__dirname, "renderer", "overlay.html"));
+  overlayWindow.setAlwaysOnTop(true, "screen-saver");
 
-  overlayWindow.once('ready-to-show', () => {
+  overlayWindow.once("ready-to-show", () => {
+    overlayWindow.setIgnoreMouseEvents(false);
     overlayWindow.show();
     overlayWindow.focus();
-    overlayWindow.setIgnoreMouseEvents(false);
   });
 
-  overlayWindow.on('closed', () => {
+  overlayWindow.on("closed", () => {
     overlayWindow = null;
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.show();
@@ -304,19 +341,24 @@ ipcMain.handle('start-pick-location', () => {
   return { success: true };
 });
 
-ipcMain.handle('pick-location-done', (event, coords) => {
+ipcMain.handle("pick-location-done", (event, coords) => {
   if (overlayWindow && !overlayWindow.isDestroyed()) {
     overlayWindow.destroy();
     overlayWindow = null;
   }
 
-  if (coords && typeof coords.x === 'number' && typeof coords.y === 'number') {
+  if (coords && typeof coords.x === "number" && typeof coords.y === "number") {
     const config = loadConfig();
     config.mouseX = Math.round(coords.x);
     config.mouseY = Math.round(coords.y);
     saveConfig(config);
-    logger.info(`Posição definida via Pick Location: X=${config.mouseX}, Y=${config.mouseY}`);
-    sendToRenderer('pick-location-result', { x: config.mouseX, y: config.mouseY });
+    logger.info(
+      `Posição definida via Pick Location: X=${config.mouseX}, Y=${config.mouseY}`,
+    );
+    sendToRenderer("pick-location-result", {
+      x: config.mouseX,
+      y: config.mouseY,
+    });
   }
 
   if (mainWindow && !mainWindow.isDestroyed()) {
@@ -327,7 +369,7 @@ ipcMain.handle('pick-location-done', (event, coords) => {
   return { success: true };
 });
 
-ipcMain.handle('cancel-pick-location', () => {
+ipcMain.handle("cancel-pick-location", () => {
   if (overlayWindow && !overlayWindow.isDestroyed()) {
     overlayWindow.destroy();
     overlayWindow = null;
@@ -339,10 +381,10 @@ ipcMain.handle('cancel-pick-location', () => {
   return { success: true };
 });
 
-app.on('window-all-closed', (e) => {
+app.on("window-all-closed", (e) => {
   e.preventDefault();
 });
 
-app.on('before-quit', () => {
+app.on("before-quit", () => {
   if (wsServer) wsServer.close();
 });

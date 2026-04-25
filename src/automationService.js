@@ -1,21 +1,37 @@
-const { spawn } = require('child_process');
-const os = require('os');
-const path = require('path');
-const fs = require('fs');
+const { spawn } = require("child_process");
+const os = require("os");
+const path = require("path");
+const fs = require("fs");
 
 // Maps friendly key names to SendKeys format
 const KEY_MAP = {
-  F1: '{F1}', F2: '{F2}', F3: '{F3}', F4: '{F4}',
-  F5: '{F5}', F6: '{F6}', F7: '{F7}', F8: '{F8}',
-  F9: '{F9}', F10: '{F10}', F11: '{F11}', F12: '{F12}',
-  ENTER: '{ENTER}', TAB: '{TAB}', ESC: '{ESC}',
-  SPACE: ' ', BACKSPACE: '{BACKSPACE}', DELETE: '{DELETE}',
-  HOME: '{HOME}', END: '{END}', INSERT: '{INSERT}',
-  PAGEUP: '{PGUP}', PAGEDOWN: '{PGDN}',
+  F1: "{F1}",
+  F2: "{F2}",
+  F3: "{F3}",
+  F4: "{F4}",
+  F5: "{F5}",
+  F6: "{F6}",
+  F7: "{F7}",
+  F8: "{F8}",
+  F9: "{F9}",
+  F10: "{F10}",
+  F11: "{F11}",
+  F12: "{F12}",
+  ENTER: "{ENTER}",
+  TAB: "{TAB}",
+  ESC: "{ESC}",
+  SPACE: " ",
+  BACKSPACE: "{BACKSPACE}",
+  DELETE: "{DELETE}",
+  HOME: "{HOME}",
+  END: "{END}",
+  INSERT: "{INSERT}",
+  PAGEUP: "{PGUP}",
+  PAGEDOWN: "{PGDN}",
 };
 
 function toSendKeysFormat(key) {
-  if (!key) return '{F5}';
+  if (!key) return "{F5}";
   const upper = key.toUpperCase().trim();
   return KEY_MAP[upper] || `{${upper}}`;
 }
@@ -38,7 +54,7 @@ async function executeAutomation(codigo, config) {
     clickDelay = 200,
     clearDelay = 100,
     typeDelay = 200,
-    keyAfterType = 'F5',
+    keyAfterType = "F5",
   } = config;
 
   const sendKey = toSendKeysFormat(keyAfterType);
@@ -90,8 +106,11 @@ Start-Sleep -Milliseconds $TypeDelay
 [System.Windows.Forms.SendKeys]::SendWait($SendKey)
 `;
 
-  const tempFile = path.join(os.tmpdir(), `automation_${process.pid}_${Date.now()}.ps1`);
-  fs.writeFileSync(tempFile, psScript, 'utf8');
+  const tempFile = path.join(
+    os.tmpdir(),
+    `automation_${process.pid}_${Date.now()}.ps1`,
+  );
+  fs.writeFileSync(tempFile, psScript, "utf8");
 
   return new Promise((resolve, reject) => {
     let settled = false;
@@ -103,42 +122,71 @@ Start-Sleep -Milliseconds $TypeDelay
       }
     };
 
-    const ps = spawn('powershell.exe', [
-      '-NoProfile',
-      '-NonInteractive',
-      '-WindowStyle', 'Hidden',
-      '-ExecutionPolicy', 'Bypass',
-      '-File', tempFile,
-      '-Code', String(codigo),
-      '-X', String(mouseX),
-      '-Y', String(mouseY),
-      '-ClickDelay', String(clickDelay),
-      '-ClearDelay', String(clearDelay),
-      '-TypeDelay', String(typeDelay),
-      '-SendKey', sendKey,
+    const ps = spawn("powershell.exe", [
+      "-NoProfile",
+      "-NonInteractive",
+      "-WindowStyle",
+      "Hidden",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+      tempFile,
+      "-Code",
+      String(codigo),
+      "-X",
+      String(mouseX),
+      "-Y",
+      String(mouseY),
+      "-ClickDelay",
+      String(clickDelay),
+      "-ClearDelay",
+      String(clearDelay),
+      "-TypeDelay",
+      String(typeDelay),
+      "-SendKey",
+      sendKey,
     ]);
 
-    let stderr = '';
-    ps.stderr.on('data', (d) => { stderr += d.toString(); });
+    let stderr = "";
+    ps.stderr.on("data", (d) => {
+      stderr += d.toString();
+    });
 
-    ps.on('close', (code) => {
-      try { fs.unlinkSync(tempFile); } catch { /* ignore cleanup errors */ }
+    ps.on("close", (code) => {
+      try {
+        fs.unlinkSync(tempFile);
+      } catch {
+        /* ignore cleanup errors */
+      }
       if (code !== 0) {
-        settle(reject, new Error(`PowerShell falhou (código ${code}): ${(stderr || 'Erro desconhecido').slice(0, 300)}`));
+        settle(
+          reject,
+          new Error(
+            `PowerShell falhou (código ${code}): ${(stderr || "Erro desconhecido").slice(0, 300)}`,
+          ),
+        );
       } else {
         settle(resolve, undefined);
       }
     });
 
-    ps.on('error', (err) => {
-      try { fs.unlinkSync(tempFile); } catch { /* ignore */ }
+    ps.on("error", (err) => {
+      try {
+        fs.unlinkSync(tempFile);
+      } catch {
+        /* ignore */
+      }
       settle(reject, new Error(`Erro ao executar PowerShell: ${err.message}`));
     });
 
     const timer = setTimeout(() => {
       ps.kill();
-      try { fs.unlinkSync(tempFile); } catch { /* ignore */ }
-      settle(reject, new Error('PowerShell timeout após 15 segundos'));
+      try {
+        fs.unlinkSync(tempFile);
+      } catch {
+        /* ignore */
+      }
+      settle(reject, new Error("PowerShell timeout após 15 segundos"));
     }, 15000);
   });
 }

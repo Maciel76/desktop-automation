@@ -1,6 +1,6 @@
 {
   "name": "promoter-automation-client",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Cliente desktop para automação de digitação em sistema de preços",
   "author": "Promoter Manager",
   "main": "main.js",
@@ -29,8 +29,18 @@
     ],
     "win": {
       "target": [
-        { "target": "nsis", "arch": ["x64"] },
-        { "target": "portable", "arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "publisherName": "Promoter Manager"
     },
