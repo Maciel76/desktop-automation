@@ -2,27 +2,29 @@
 
 App Electron para automação de digitação de códigos em sistemas de terceiros.
 
+> **Não requer instalação do Node.js** — o `.exe` inclui tudo embutido.
+
+## Download
+
+Baixe a versão mais recente em **[Releases](../../releases/latest)**.
+
+| Arquivo | Descrição |
+|---------|-----------|
+| `Automation.Client.Setup.X.X.X.exe` | Instalador (recomendado) |
+| `Automation.Client.X.X.X.exe` | Portable (sem instalação) |
+
+## ⚠️ Aviso do Windows ao abrir o .exe
+
+O Windows pode mostrar um aviso de segurança ("O aplicativo não é reconhecido") porque o arquivo não possui assinatura digital paga. Isso é normal para softwares internos.
+
+**Como contornar:**
+
+1. Clique em **"Mais informações"** na tela azul do Windows Defender SmartScreen
+2. Clique em **"Executar mesmo assim"**
+
+Ou: clique com o botão direito no `.exe` → **Propriedades** → marque **"Desbloquear"** → OK
+
 ## Instalação e Uso
-
-> ⚠️ **Execute sempre pelo Windows** (CMD ou PowerShell), não pelo WSL/Linux.
-
-```bash
-# Abra o CMD ou PowerShell do Windows, navegue até esta pasta:
-cd C:\Users\Maciel Ribeiro\Desktop\Promoter\desktop-automation
-
-# Instalar dependências
-npm install
-
-# Executar em modo desenvolvimento
-npm start
-
-# Gerar instalador Windows (.exe)
-npm run build
-```
-
-O instalador será gerado em `dist/`.
-
-## Como funciona
 
 1. O app inicia um servidor WebSocket local na porta configurada (padrão: **9099**)
 2. Envie mensagens no formato `{ "codigo": "123456" }` para o WebSocket

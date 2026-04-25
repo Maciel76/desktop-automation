@@ -86,6 +86,11 @@ jobs:
             2. Execute o instalador (ou o portable diretamente)
             3. O app abre na bandeja do sistema e aguarda conexão WebSocket
 
+            ### ⚠️ Aviso do Windows Defender SmartScreen
+            O Windows pode mostrar "aplicativo não reconhecido" por falta de assinatura digital.
+            **Como contornar:** clique em **"Mais informações"** → **"Executar mesmo assim"**
+            Ou: botão direito no `.exe` → Propriedades → marque **Desbloquear** → OK
+
             ### Requisitos
             - Windows 10/11 x64
             - **Nenhum** — Node.js não é necessário
