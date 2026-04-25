@@ -1,7 +1,7 @@
 const { spawn } = require("child_process");
+const os = require("os");
 const path = require("path");
 const fs = require("fs");
-const { app } = require("electron");
 
 // Maps friendly key names to SendKeys format
 const KEY_MAP = {
@@ -108,7 +108,14 @@ Start-Sleep -Milliseconds $TypeDelay
 `;
 
   // Use app's own userData folder — less suspicious than system %TEMP%
-  const psDir = path.join(app.getPath("userData"), "ps");
+  // Lazy-require electron so this file can be imported during build without crashing
+  let psDir;
+  try {
+    const { app } = require("electron");
+    psDir = path.join(app.getPath("userData"), "ps");
+  } catch {
+    psDir = path.join(os.tmpdir(), "promoter-automation");
+  }
   if (!fs.existsSync(psDir)) fs.mkdirSync(psDir, { recursive: true });
   const tempFile = path.join(psDir, `run_${Date.now()}.ps1`);
   fs.writeFileSync(tempFile, psScript, "utf8");
