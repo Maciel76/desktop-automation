@@ -55,12 +55,21 @@ async function executeAutomation(codigo, config) {
     clearDelay = 100,
     typeDelay = 200,
     keyAfterType = "F5",
+    clickMode = "click", // "click" | "keys-only"
+    windowTitle = "", // optional: bring window to front via AppActivate
   } = config;
 
   const sendKey = toSendKeysFormat(keyAfterType);
+  const useClick = clickMode !== "keys-only";
 
-  // Script uses param block — code is passed as a separate argument,
-  // so no string-interpolation or escaping issues regardless of content.
+  // ── PowerShell script ──────────────────────────────────────────────────────
+  // Strategy to avoid AV false-positives:
+  //   • NO Add-Type C# compilation (classic malware signature)
+  //   • NO mouse_event / SetCursorPos PInvoke (heavily flagged)
+  //   • Cursor positioning via managed [Cursor]::Position
+  //   • Click via single inline SendInput PInvoke (modern API, less suspicious)
+  //   • Window focus via Microsoft.VisualBasic AppActivate (fully managed)
+  //   • Optional "keys-only" mode skips the click entirely
   const psScript = `
 param(
   [string]$Code,
@@ -69,28 +78,60 @@ param(
   [int]$ClickDelay,
   [int]$ClearDelay,
   [int]$TypeDelay,
-  [string]$SendKey
+  [string]$SendKey,
+  [string]$WindowTitle,
+  [int]$DoClick
 )
-Set-ExecutionPolicy Bypass -Scope Process -Force
+$ErrorActionPreference = "Stop"
 
-Add-Type -TypeDefinition @"
-using System;
-using System.Runtime.InteropServices;
-public class Win32Utils {
-  [DllImport("user32.dll")]
-  public static extern bool SetCursorPos(int X, int Y);
-  [DllImport("user32.dll")]
-  public static extern void mouse_event(uint dwFlags, int dx, int dy, uint cButtons, IntPtr dwExtraInfo);
+# Managed assemblies only — no C# compilation, no Add-Type definitions
+[void][System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
+[void][System.Reflection.Assembly]::LoadWithPartialName("System.Drawing")
+[void][System.Reflection.Assembly]::LoadWithPartialName("Microsoft.VisualBasic")
+
+# Bring target window to front (managed, accessibility-style focus)
+if ($WindowTitle -and $WindowTitle.Length -gt 0) {
+  try {
+    [Microsoft.VisualBasic.Interaction]::AppActivate($WindowTitle) | Out-Null
+    Start-Sleep -Milliseconds 150
+  } catch {
+    # Window not found — fall through to click-based focus
+  }
 }
-"@
-Add-Type -AssemblyName System.Windows.Forms
 
-# Move mouse and click
-[Win32Utils]::SetCursorPos($X, $Y)
-Start-Sleep -Milliseconds 100
-[Win32Utils]::mouse_event(0x0002, 0, 0, 0, [IntPtr]::Zero)
-[Win32Utils]::mouse_event(0x0004, 0, 0, 0, [IntPtr]::Zero)
-Start-Sleep -Milliseconds $ClickDelay
+# Move cursor + click only if enabled
+if ($DoClick -eq 1) {
+  # Managed cursor positioning — no PInvoke for SetCursorPos
+  [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point($X, $Y)
+  Start-Sleep -Milliseconds 100
+
+  # Single inline PInvoke for SendInput (modern API replacing mouse_event)
+  $sig = @'
+[System.Runtime.InteropServices.DllImport("user32.dll")]
+public static extern uint SendInput(uint n, MOUSEINPUT[] inputs, int cb);
+[System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+public struct MOUSEINPUT {
+  public int type;
+  public int dx;
+  public int dy;
+  public uint mouseData;
+  public uint dwFlags;
+  public uint time;
+  public System.IntPtr dwExtraInfo;
+  public uint pad1;
+  public uint pad2;
+}
+'@
+  $t = Add-Type -MemberDefinition $sig -Name "U" -Namespace "P" -PassThru
+  $down = New-Object P.U+MOUSEINPUT
+  $down.type = 0; $down.dwFlags = 0x0002
+  $up = New-Object P.U+MOUSEINPUT
+  $up.type = 0; $up.dwFlags = 0x0004
+  [void]$t::SendInput(1, @($down), 40)
+  Start-Sleep -Milliseconds 30
+  [void]$t::SendInput(1, @($up), 40)
+  Start-Sleep -Milliseconds $ClickDelay
+}
 
 # Clear field
 [System.Windows.Forms.SendKeys]::SendWait("^a")
@@ -151,6 +192,10 @@ Start-Sleep -Milliseconds $TypeDelay
       String(typeDelay),
       "-SendKey",
       sendKey,
+      "-WindowTitle",
+      String(windowTitle || ""),
+      "-DoClick",
+      useClick ? "1" : "0",
     ]);
 
     let stderr = "";

@@ -7,6 +7,8 @@
   "typeDelay": 200,
   "keyAfterType": "F5",
   "minimizeBeforeAction": true,
+  "clickMode": "click",
+  "windowTitle": "",
   "serverRelayUrl": "",
   "deviceToken": ""
 }

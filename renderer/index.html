@@ -171,6 +171,26 @@
           </label>
         </div>
 
+        <!-- Click mode (anti-AV option) -->
+        <div class="form-group">
+          <label>Modo de execução</label>
+          <select id="cfg-click-mode" class="form-input">
+            <option value="click">Clicar na tela + Digitar (padrão)</option>
+            <option value="keys-only">
+              Apenas digitar (sem clique — use se o antivírus bloquear)
+            </option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Título da janela alvo (opcional)</label>
+          <input
+            type="text"
+            id="cfg-window-title"
+            class="form-input"
+            placeholder="Ex: Sistema de Preços (deixe em branco se não souber)"
+          />
+        </div>
+
         <!-- Relay config -->
         <div class="relay-section">
           <div class="relay-title">

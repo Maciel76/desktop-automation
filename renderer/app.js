@@ -36,6 +36,8 @@ const cfgTypeDelay = document.getElementById("cfg-type-delay");
 const cfgMinimize = document.getElementById("cfg-minimize");
 const cfgRelayUrl = document.getElementById("cfg-relay-url");
 const cfgDeviceToken = document.getElementById("cfg-device-token");
+const cfgClickMode = document.getElementById("cfg-click-mode");
+const cfgWindowTitle = document.getElementById("cfg-window-title");
 
 // --- Pick Location elements ---
 const btnPickLocation = document.getElementById("btn-pick-location");
@@ -155,6 +157,8 @@ async function loadConfigIntoForm() {
   cfgMinimize.checked = config.minimizeBeforeAction !== false;
   cfgRelayUrl.value = config.serverRelayUrl || "";
   cfgDeviceToken.value = config.deviceToken || "";
+  cfgClickMode.value = config.clickMode || "click";
+  cfgWindowTitle.value = config.windowTitle || "";
 
   // Sync pick location display
   pickXDisplay.textContent = config.mouseX || 500;
@@ -222,6 +226,8 @@ btnSaveConfig.addEventListener("click", async () => {
     minimizeBeforeAction: cfgMinimize.checked,
     serverRelayUrl: cfgRelayUrl.value.trim(),
     deviceToken: cfgDeviceToken.value.trim(),
+    clickMode: cfgClickMode.value || "click",
+    windowTitle: cfgWindowTitle.value.trim(),
   };
 
   const result = await api.saveConfig(config);
