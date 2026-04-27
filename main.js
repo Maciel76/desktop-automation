@@ -57,6 +57,15 @@ function sendToRenderer(channel, data) {
   }
 }
 
+function getAppIcon() {
+  // Loaded once, used by window + tray. Falls back to empty image if missing.
+  const iconPath = path.join(__dirname, "build", "icon.png");
+  if (fs.existsSync(iconPath)) {
+    return nativeImage.createFromPath(iconPath);
+  }
+  return nativeImage.createEmpty();
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 520,
@@ -65,6 +74,7 @@ function createWindow() {
     minHeight: 500,
     resizable: true,
     title: "Automation Client",
+    icon: getAppIcon(),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -81,9 +91,12 @@ function createWindow() {
 }
 
 function createTray() {
-  // Use a simple default icon
-  const icon = nativeImage.createEmpty();
-  tray = new Tray(icon);
+  const icon = getAppIcon();
+  // Resize for tray (16x16 on Windows). createEmpty() will skip the resize.
+  const trayIcon = icon.isEmpty()
+    ? icon
+    : icon.resize({ width: 16, height: 16 });
+  tray = new Tray(trayIcon);
   tray.on("click", () => mainWindow && mainWindow.show());
   buildTrayMenu(false);
 }

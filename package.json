@@ -1,6 +1,6 @@
 {
   "name": "promoter-automation-client",
-  "version": "1.1.7",
+  "version": "1.1.8",
   "description": "Cliente desktop para automação de digitação em sistema de preços",
   "author": "Promoter Manager",
   "copyright": "Copyright © 2025 Promoter Manager",
@@ -26,8 +26,10 @@
       "preload.js",
       "src/**/*",
       "renderer/**/*",
-      "config.json"
+      "config.json",
+      "build/icon.png"
     ],
+    "icon": "build/icon.png",
     "win": {
       "target": [
         {
@@ -43,6 +45,7 @@
           ]
         }
       ],
+      "icon": "build/icon.png",
       "publisherName": "Promoter Manager",
       "legalTrademarks": "Promoter Manager",
       "verifyUpdateCodeSignature": false
@@ -51,7 +54,10 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "createStartMenuShortcut": true,
+      "installerIcon": "build/icon.png",
+      "uninstallerIcon": "build/icon.png",
+      "installerHeaderIcon": "build/icon.png"
     },
     "directories": {
       "output": "dist"

@@ -15,10 +15,19 @@
       <!-- Header -->
       <header class="header">
         <div class="header-left">
-          <div class="app-icon">⚡</div>
+          <div class="app-icon">
+            <img
+              src="../build/icon.png"
+              alt="Logo"
+              onerror="
+                this.style.display = 'none';
+                this.parentElement.textContent = '⚡';
+              "
+            />
+          </div>
           <div>
             <h1>Automation Client</h1>
-            <span class="version">v1.0.0</span>
+            <span class="version" id="app-version">v1.1.8</span>
           </div>
         </div>
         <div class="header-right">
