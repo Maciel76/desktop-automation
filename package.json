@@ -54,10 +54,7 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "installerIcon": "build/icon.png",
-      "uninstallerIcon": "build/icon.png",
-      "installerHeaderIcon": "build/icon.png"
+      "createStartMenuShortcut": true
     },
     "directories": {
       "output": "dist"
